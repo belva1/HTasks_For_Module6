@@ -1,143 +1,149 @@
-from django.http import Http404
-from rest_framework import status
-from rest_framework.decorators import action
-from rest_framework.generics import RetrieveUpdateDestroyAPIView, ListCreateAPIView
+from rest_framework import status, viewsets
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 
 from .models import Author, Book
 from .serializers import AuthorSerializer, BookSerializer
 
-"""
-NOTE
-query_params is the request part of the Django REST framework (DRF) 
-that allows you to access the query parameters passed in the URL.
-"""
 
-
-class BookCreateListView(ListCreateAPIView):
-    queryset = Book.objects.all()
-    serializer_class = BookSerializer
-
-    def get_queryset(self):
-        queryset = Book.objects.all()
-        # AUTHOR_AGE - Variable containing the age of the author of the book.
-        author_age = self.request.query_params.get('author_age')
+@api_view(['GET', 'POST'])
+def books_list_view(request) -> Response:
+    if request.method == 'GET':
+        author_age = request.query_params.get('author_age')
+        """
+        I tried to do this, please tell me if this is the right approach?
+        
         if author_age is not None:
-            # AUTHOR__AGE -> special syntax for filtering by related fields (FK) in Django ORM.
-            queryset = queryset.filter(author__age__gte=author_age)
-        return queryset
+            filtered_books = books.filter(author__age__gte=author_age)
+            ser_filtered_books = BookSerializer(filtered_books, many=True)
+            ser_filtered_books.is_valid(raise_exception=True)
+            return Response(data=ser_filtered_books.data, status=status.HTTP_200_OK)
+        """
+        if author_age is not None:
+            try:
+                author_age = int(author_age)
+            except ValueError:
+                return Response({"error": "Invalid author_age parameter"}, status=status.HTTP_400_BAD_REQUEST)
+
+            books = Book.objects.filter(author__age__gte=author_age)
+        else:
+            books = Book.objects.all()
+
+        ser_books = BookSerializer(books, many=True)
+        return Response(data=ser_books.data, status=status.HTTP_200_OK)
+
+    if request.method == 'POST':
+        # immediately create a serializer with transmitted data
+        ser_book = BookSerializer(data=request.data)
+        # then, it necessary to check validation of the serializer
+        if ser_book.is_valid():
+            ser_book.validated_data['title'] += '!'
+            ser_book.save()
+            return Response(data=ser_book.data, status=status.HTTP_201_CREATED)
+        return Response(ser_book.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class BookDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Book.objects.all()
-    serializer_class = BookSerializer
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def books_detail_view(request, pk) -> Response:
+    """
+    instead of Book.objects.get(pk=pk) I use Book.objects.filter(pk=pk).first() :
+    If this object does not exist, instead of throwing an "DoesNotExist" error, my condition block will go
+    to return Response(status=status.HTTP_404_NOT_FOUND), because object WO this pk will return "None".
 
+    This can also be implemented using Book.objects.get(pk=pk):
+        try:
+            book = Book.objects.get(pk=pk)
+        except Book.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+    """
 
-class AuthorCreateListView(ListCreateAPIView):
-    queryset = Author.objects.all()
-    serializer_class = AuthorSerializer
+    book = Book.objects.filter(pk=pk).first()
+    if book:
+        if request.method == 'GET':
+            ser_book = BookSerializer(book)
+            ser_book.save()
+            return Response(data=ser_book.data, status=status.HTTP_200_OK)
+        if request.method == 'DELETE':
+            book.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        """
+        Combined the logic for PUT and PATCH requests in one block. 
+        Use request.method == 'PATCH' to determine if the request is a 
+        PATCH and pass partial=True if it is.
+        """
+        ser_book = BookSerializer(book, data=request.data, partial=request.method == 'PATCH')
 
-    def get_queryset(self):
-        queryset = Author.objects.all()
-        book_name = self.request.query_params.get('book_name')
-        if book_name is not None:
-            # AUTHOR_OF_BOOKS -> related_name for author FK.
-            # AUTHOR_OF_BOOKS__TITLE -> special syntax for filtering.
-            queryset = queryset.filter(author_of_books__title__icontains=book_name)
-        return queryset
+        if ser_book.is_valid():
+            ser_book.save()
+            return Response(data=ser_book.data, status=status.HTTP_201_CREATED)
+        return Response(ser_book.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
-class AuthorDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Author.objects.all()
-    serializer_class = AuthorSerializer
+    return Response(status=status.HTTP_404_NOT_FOUND)
 
 
 """
-CRUD WITH APIView
-class BookCreateListView(APIView):
-    def get(self, request):
-        books = Book.objects.all()
-        serializer = BookSerializer(books, many=True)
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
+THIS IS WHAT THE SEPARATELY PRESENTED METHODS 'PUT', 'PATCH' WOULD LOOK LIKE :
 
-    def post(self, request):
-        serializer = BookSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
-
-
-class BookDetailView(APIView):
-    def get_object(self, pk):
-        if book := Book.objects.filter(pk=pk).first():
-            return book
-        raise Http404
-
-    def get(self, request, pk):
-        book = self.get_object(pk)
-        serializer = BookSerializer(book)
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, pk):
-        book = self.get_object(pk)
-        serializer = BookSerializer(book, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def patch(self, request, pk):
-        book = self.get_object(pk)
-        serializer = BookSerializer(book, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def delete(self, request, pk):
-        book = self.get_object(pk)
-        book.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        if request.method == 'PUT':
+            ser_book = BookSerializer(data=request.data)
+            if ser_book.is_valid():
+                ser_book.save()
+                return Response(data=ser_book.data, status=status.HTTP_201_CREATED)
+            return Response(ser_book.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.method == 'PATCH':
+            ser_book = BookSerializer(data=request.data, partial=True)
+            if ser_book.is_valid():
+                ser_book.save()
+                return Response(data=ser_book.data, status=status.HTTP_201_CREATED)
+            return Response(ser_book.errors, status=status.HTTP_400_BAD_REQUEST)
+"""
 
 
-class AuthorCreateListView(APIView):
-    def get(self, request):
-        authors = Author.objects.all()
-        serializer = BookSerializer(authors, many=True)
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
+@api_view(['GET', 'POST'])
+def authors_list_view(request) -> Response:
+    if request.method == 'GET':
+        book_name = request.query_params.get('book_name')
+        """
+        I tried to do this, please tell me if this is the right approach?
+        
+        if book_name is not None:
+            filtered_authors = authors.filter(author_of_books__title__icontains=book_name)
+            ser_filtered_authors = AuthorSerializer(data=filtered_authors, many=True)
+            ser_filtered_authors.is_valid(raise_exception=True)
+            return Response(data=ser_filtered_authors.data, status=status.HTTP_200_OK)
+        """
 
-    def post(self, request):
-        serializer = AuthorSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+        if book_name is not None:
+            authors = Author.objects.filter(author_of_books__title__icontains=book_name).distinct()
+        else:
+            authors = Author.objects.all()
+
+        ser_authors = AuthorSerializer(authors, many=True)
+        return Response(data=ser_authors.data, status=status.HTTP_200_OK)
+
+    if request.method == 'POST':
+        ser_author = AuthorSerializer(data=request.data)
+        if ser_author.is_valid():
+            ser_author.save()
+            return Response(data=ser_author.data, status=status.HTTP_201_CREATED)
+        return Response(status=status.HTTP_400_BAD_REQUEST)
 
 
-class AuthorDetailView(APIView):
-    def get_object(self, pk):
-        if author := Author.objects.filter(pk=pk).first():
-            return author
-        raise Http404
+@api_view(['GET', 'PUT', 'PATCH', 'DELETE'])
+def authors_detail_view(request, pk):
+    try:
+        author = Author.objects.get(pk=pk)
+    except Author.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-    def get(self, request, pk):
-        author = self.get_object(pk)
-        serializer = AuthorSerializer(author)
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def put(self, request, pk):
-        author = self.get_object(pk)
-        serializer = AuthorSerializer(author, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def patch(self, request, pk):
-        author = self.get_object(pk)
-        serializer = AuthorSerializer(author, data=request.data, partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    def delete(self, request, pk):
-        author = self.get_object(pk)
+    if request.method == 'DELETE':
         author.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-"""
+
+    ser_author = AuthorSerializer(author, data=request.data, partial=request.method == 'PATCH')
+
+    if ser_author.is_valid():
+        ser_author.save()
+        return Response(data=ser_author.data, status=status.HTTP_200_OK)
+    return Response(status=status.HTTP_400_BAD_REQUEST)
