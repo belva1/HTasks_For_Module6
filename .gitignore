@@ -5,4 +5,4 @@
 .idea/
 __pycache__/
 venv/
-rdrf_project/db.sqlite3
+drf_project/db.sqlite3
