@@ -1,17 +1,22 @@
 from rest_framework import status, viewsets
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import action, authentication_classes
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.filters import SearchFilter, OrderingFilter
+
+from rest_framework.authentication import SessionAuthentication
+from drf_project.authentication import CustomTokenAuthentication
 
 from .models import Author
 from .serializers import AuthorSerializer
-from books.models import Book
-from books.serializers import BookSerializer
+from drf_project.permissions import IsAdminCreateOrAuthenticated
 
 
+@authentication_classes([SessionAuthentication, CustomTokenAuthentication])
 class AuthorsViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
+    permission_classes = [IsAdminCreateOrAuthenticated]
+
 
     def get_queryset(self):
         queryset = Author.objects.all()
@@ -33,4 +38,4 @@ class AuthorsViewSet(viewsets.ModelViewSet):
             'books': author.get_id_of_books(),
         }
 
-        return Response(author_data)
+        return Response(data=author_data, status=status.HTTP_200_OK)

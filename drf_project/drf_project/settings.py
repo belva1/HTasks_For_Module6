@@ -39,10 +39,32 @@ INSTALLED_APPS = [
     'authors',
     'books',
     'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 # "DEFAULT_RENDERER_CLASSES" -> TO CONVERT THE DATA TO JSON FORMAT
 REST_FRAMEWORK = {
+
+    """
+    Defines a list of authentication classes that will be used to authenticate users
+    """
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # 'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',
+        'authentication.CustomTokenAuthentication',
+    ],
+
+    'DEFAULT_FILTER_BACKENDS': ['rest_framework.filters.SearchFilter'],
+
+    """
+    Only authenticated users will have access to views
+    """
+
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 
     """
     DEFAULT_RENDERER_CLASSES' is a parameter that accepts a tuple of renderer classes to 
@@ -57,7 +79,9 @@ REST_FRAMEWORK = {
     """
     'DEFAULT_PAGINATION_CLASS' is an option that accepts a string representing the default pagination class.
     """
+    
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+
 }
 
 MIDDLEWARE = [
