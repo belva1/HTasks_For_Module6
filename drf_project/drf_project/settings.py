@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
 ]
 
-# "DEFAULT_RENDERER_CLASSES" -> TO CONVERT THE DATA TO JSON FORMAT
+
 REST_FRAMEWORK = {
 
     """
@@ -71,7 +71,7 @@ REST_FRAMEWORK = {
     format API responses into different formats (such as JSON, XML, and others). The tuple 
     is enclosed in parentheses because it can contain multiple elements.
     """
-    
+
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
     ),

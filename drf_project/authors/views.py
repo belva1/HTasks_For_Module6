@@ -1,14 +1,16 @@
+from .models import Author
+from .serializers import AuthorSerializer
+
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, authentication_classes
 from rest_framework.response import Response
-from rest_framework.filters import SearchFilter, OrderingFilter
 
 from rest_framework.authentication import SessionAuthentication
 from drf_project.authentication import CustomTokenAuthentication
-
-from .models import Author
-from .serializers import AuthorSerializer
 from drf_project.permissions import IsAdminCreateOrAuthenticated
+
+from .filters import BookNameFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 
 
 @authentication_classes([SessionAuthentication, CustomTokenAuthentication])
@@ -16,16 +18,12 @@ class AuthorsViewSet(viewsets.ModelViewSet):
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
     permission_classes = [IsAdminCreateOrAuthenticated]
-
-
-    def get_queryset(self):
-        queryset = Author.objects.all()
-        book_name = self.request.query_params.get('book_name')
-
-        if book_name:
-            queryset = queryset.filter(author_of_books__title__icontains=book_name)
-
-        return queryset
+    filter_backends = [
+        SearchFilter,
+        OrderingFilter,
+        BookNameFilterBackend,
+    ]
+    search_fields = ['name']
 
     @action(detail=True, methods=['GET'])
     def author_with_books(self, request, pk=None):
