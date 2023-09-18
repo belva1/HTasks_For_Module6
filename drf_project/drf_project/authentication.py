@@ -20,7 +20,7 @@ class CustomTokenAuthentication(TokenAuthentication):
         If the token creation time is less than the current time minus 10 minutes, this means 
         that the token was created more than 10 minutes ago.
         """
-        if token.created < timezone.now() - timezone.timedelta(days=1):
+        if token.created < timezone.now() - timezone.timedelta(minutes=10):
             token.delete()
             raise exceptions.AuthenticationFailed(_('Token has expired.'))
 
