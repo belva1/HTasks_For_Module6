@@ -6,8 +6,8 @@ from rest_framework.decorators import action, authentication_classes
 from rest_framework.response import Response
 
 from rest_framework.authentication import SessionAuthentication
-from drf_project.authentication import CustomTokenAuthentication
-from drf_project.permissions import IsAdminCreateOrAuthenticated
+from users.authentication import CustomTokenAuthentication
+from users.permissions import IsAdminCreateOrAuthenticated
 
 from .filters import BookNameFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter

@@ -5,8 +5,8 @@ from rest_framework import viewsets
 from rest_framework.decorators import authentication_classes
 
 from rest_framework.authentication import SessionAuthentication
-from drf_project.authentication import CustomTokenAuthentication
-from drf_project.permissions import IsAdminCreateOrAuthenticated
+from users.authentication import CustomTokenAuthentication
+from users.permissions import IsAdminCreateOrAuthenticated
 
 from rest_framework.filters import SearchFilter, OrderingFilter
 from .filters import IsAuthorFilterBackend, AuthorBooksByAgeFilterBackend
