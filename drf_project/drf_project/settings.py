@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'books',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_extensions',
 ]
 
 
@@ -126,7 +127,19 @@ DATABASES = {
         'PASSWORD': 'drf_project',
         'HOST': 'localhost',
         'PORT': '5432',
+    },
+    'test': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'drf_test_database',
+        'USER': 'drf',
+        'PASSWORD': 'drf_project',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
+}
+
+TEST = {
+    'NAME': 'drf_test_database',
 }
 
 # Password validation

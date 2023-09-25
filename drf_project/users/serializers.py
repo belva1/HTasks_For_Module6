@@ -5,4 +5,4 @@ from .models import UM
 class UMSerializer(serializers.ModelSerializer):
     class Meta:
         model = UM
-        fields = ['id', 'username', 'password']
+        fields = ('id', 'username')

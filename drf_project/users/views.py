@@ -1,15 +1,15 @@
-from rest_framework.decorators import api_view
+from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
 # from .models import UM
 from .serializers import UMSerializer
 
 
-@api_view(['GET'])
-def user_detail(request):
-    cur_user = request.user
-    serializer = UMSerializer(cur_user)
-    obj = {
-        "id": serializer.data['id'],
-        "username": serializer.data['username'],
-    }
-    return Response(obj)
+class UserDetail(APIView):
+    def get(self, request):
+        if request.user.is_authenticated:
+            serializer = UMSerializer(request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
